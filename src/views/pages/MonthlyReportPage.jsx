@@ -1,6 +1,24 @@
 import React, { useState, useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { useMonthlyReport } from '../../controllers/useMonthlyReport';
 import { exportToExcel } from '../../utils/exportToExcel';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Choose a year',
+    description: 'Use the year selector to load the monthly deployment matrix for a different year.',
+  },
+  {
+    title: 'Narrow the matrix',
+    description: 'Combine the month, project, MAT, team, DU, and province filters to focus on the assignments you need. Filters update the table immediately.',
+  },
+  {
+    title: 'Clear or export',
+    description: 'Clear filters to return to the full year, or export the currently filtered matrix to Excel.',
+  },
+];
 
 const MONTHS = [
   { key: 'm_jan', label: 'Jan' },
@@ -182,7 +200,7 @@ export const MonthlyReportPage = () => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <h1>Monthly Deployment Matrix — {year}</h1>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <select
@@ -210,7 +228,15 @@ export const MonthlyReportPage = () => {
             ⬇ Export to Excel
           </button>
         </div>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help with the monthly report?"
+        title="How to use the Monthly Deployment Matrix"
+        intro="Review deployment assignments across the selected year and narrow the matrix to the details you need."
+        steps={TUTORIAL_STEPS}
+        reminder="The Excel export follows the current filters."
+      />
 
       {/* ─── Filter toolbar ─── */}
       <div className="table-toolbar">
@@ -315,7 +341,7 @@ export const MonthlyReportPage = () => {
       </div>
 
       {/* ─── Table ─── */}
-      <div className="table-container" style={{ position: 'relative' }}>
+      <TableHorizontalScroll>
         {loading && rows.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
@@ -401,7 +427,7 @@ export const MonthlyReportPage = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
     </div>
   );
 };

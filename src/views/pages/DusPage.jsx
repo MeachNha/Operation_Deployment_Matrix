@@ -1,5 +1,23 @@
 import React, { useState } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { useDusController } from '../../controllers/useDusController';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Add a demining unit',
+    description: 'Choose Add New DU and enter both a unique DU code and a descriptive name.',
+  },
+  {
+    title: 'Update unit details',
+    description: 'Choose Edit in a DU row to change its code or name.',
+  },
+  {
+    title: 'Delete an unused unit',
+    description: 'Choose Delete to remove a DU, then confirm the action when prompted.',
+  },
+];
 
 export const DusPage = () => {
   const { dus, loading, saving, error, createDu, updateDu, deleteDu } = useDusController();
@@ -58,7 +76,7 @@ export const DusPage = () => {
 
   return (
     <div className="data-page">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>Demining Units</h1>
           <p className="report-subtitle">Manage all demining units</p>
@@ -66,11 +84,19 @@ export const DusPage = () => {
         <button className="btn-primary" onClick={openAdd}>
           + Add New DU
         </button>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help managing DUs?"
+        title="How to manage Demining Units"
+        intro="Maintain the DU codes and names used throughout deployment management and reporting."
+        steps={TUTORIAL_STEPS}
+        reminder="Use consistent DU codes so existing records and report filters remain recognizable."
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
-      <div className="table-container">
+      <TableHorizontalScroll>
         <table className="deployments-table">
           <thead>
             <tr>
@@ -114,7 +140,7 @@ export const DusPage = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>

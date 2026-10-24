@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { deploymentModel } from '../../models/deploymentModel';
 
 export const EditDeploymentModal = ({
@@ -25,14 +25,31 @@ export const EditDeploymentModal = ({
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Tracks whether the user manually edited plan_end_deploy.
+  // If not, we keep it synced to the selected project's contract_end_date.
+  const planEndEditedRef = useRef(false);
+
+  const defaultPlanEndForProject = (projectId) => {
+    const p = projects.find((x) => x.id === projectId);
+    return p?.contract_end_date || '';
+  };
+
+  // ─── Load deployment into form ─────────────────────
   useEffect(() => {
     if (deployment && isOpen) {
+      planEndEditedRef.current = false;
+
+      const initialProjectId = deployment.project_id || '';
       setForm({
         assigned_du_id: deployment.assigned_du_id || '',
-        project_id: deployment.project_id || '',
+        project_id: initialProjectId,
         province: deployment.province || '',
         start_deploy: deployment.start_deploy || '',
-        plan_end_deploy: deployment.plan_end_deploy || '',
+        // If the deployment has no plan end yet, fall back to the
+        // selected project's contract end date. Otherwise keep what's saved.
+        plan_end_deploy:
+          deployment.plan_end_deploy ||
+          defaultPlanEndForProject(initialProjectId),
         end_deploy: deployment.end_deploy || '',
         status: deployment.status || 'active',
         ops_letter_ref: deployment.ops_letter_ref || '',
@@ -41,7 +58,8 @@ export const EditDeploymentModal = ({
       setErrors({});
       setSubmitError(null);
     }
-  }, [deployment, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deployment, isOpen, projects]);
 
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === form.project_id),
@@ -54,18 +72,22 @@ export const EditDeploymentModal = ({
     setForm((prev) => {
       const next = { ...prev, [key]: value };
 
-      // ─── AUTO-FILL when project changes AND dates are empty ───
+      // ─── AUTO-FILL when project changes (unless user edited plan end) ───
       if (key === 'project_id') {
         const project = projects.find((p) => p.id === value);
         if (project) {
-          // Only fill if the field is currently empty
           if (!prev.start_deploy) {
             next.start_deploy = project.contract_start_date;
           }
-          if (!prev.plan_end_deploy) {
+          if (!planEndEditedRef.current) {
             next.plan_end_deploy = project.contract_end_date;
           }
         }
+      }
+
+      // User overrode the planned end → stop auto-filling it
+      if (key === 'plan_end_deploy') {
+        planEndEditedRef.current = true;
       }
 
       // Auto-clear end_deploy when switching to active
@@ -100,8 +122,7 @@ export const EditDeploymentModal = ({
 
     if (form.status === 'active') {
       if (form.end_deploy) {
-        next.status =
-          'Active deployments cannot have an actual end date.';
+        next.status = 'Active deployments cannot have an actual end date.';
       }
     } else {
       if (!form.end_deploy) {
@@ -300,7 +321,11 @@ export const EditDeploymentModal = ({
                   }
                 />
                 <span className="form-hint">
-                  Default: contract end date
+                  Defaults to project contract end
+                  {selectedProject?.contract_end_date
+                    ? ` (${selectedProject.contract_end_date})`
+                    : ''}
+                  . Editable.
                 </span>
                 {errors.plan_end_deploy && (
                   <span className="form-error">{errors.plan_end_deploy}</span>

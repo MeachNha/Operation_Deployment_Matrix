@@ -1,0 +1,97 @@
+/* ─── Pivot Table (Monthly Report) ───────────────── */
+.pivot-table th:nth-child(n+7),
+.pivot-table td:nth-child(n+7) {
+  min-width: 72px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.pivot-table th:nth-child(n+7) {
+  font-size: 11px;
+  padding: 10px 6px;
+}
+
+.cell-project {
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-weight: 600;
+}
+
+.cell-na {
+  background: #f7fafc;
+  color: #cbd5e0;
+  font-style: italic;
+}
+/* ─── App Navigation ────────────────────────────── */
+.app-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.app-nav button {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.app-nav button:hover {
+  background: #edf2f7;
+  color: #2d3748;
+}
+
+.app-nav button.nav-active {
+  background: #4299e1;
+  color: white;
+}
+/* ─── DU Report ─────────────────────────────────── */
+.row-idle {
+  background: #fefcbf;
+}
+
+.row-idle:hover {
+  background: #fef08a;
+}
+
+.badge-active {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.badge-idle {
+  background: #fed7d7;
+  color: #822727;
+}
+
+.totals-row {
+  background: #edf2f7;
+  font-weight: 700;
+  border-top: 2px solid #cbd5e0;
+}
+
+.totals-row td {
+  padding: 14px 12px;
+}
+/* ─── Export Button ─────────────────────────────── */
+.btn-export {
+  padding: 8px 16px;
+  background: #38a169;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.btn-export:hover {
+  background: #2f855a;
+}

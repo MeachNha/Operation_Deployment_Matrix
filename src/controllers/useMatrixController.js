@@ -15,6 +15,7 @@ export const useMatrixController = () => {
   const [filters, setFilters] = useState({
     duCode: '',
     projectCode: '',
+    teamCode: '',
     materialType: '',
     province: '',
     status: '',
@@ -52,6 +53,7 @@ export const useMatrixController = () => {
     return deployments.filter((d) => {
       const matchesDu = !filters.duCode || d.assigned_du?.code === filters.duCode;
       const matchesProject = !filters.projectCode || d.project?.code === filters.projectCode;
+      const matchesTeam = !filters.teamCode || d.team?.team_code === filters.teamCode;
       const matchesMaterial = !filters.materialType || d.team?.mat === filters.materialType;
       const matchesProvince =
         !filters.province ||
@@ -67,6 +69,7 @@ export const useMatrixController = () => {
       return (
         matchesDu &&
         matchesProject &&
+        matchesTeam &&
         matchesMaterial &&
         matchesProvince &&
         matchesStatus &&
@@ -76,7 +79,7 @@ export const useMatrixController = () => {
     });
   }, [deployments, filters]);
 
-  const stats = useMemo(() => {
+    const stats = useMemo(() => {
     const active = filteredDeployments.filter((d) => d.status === 'active');
     const completed = filteredDeployments.filter((d) => d.status === 'completed');
     const cancelled = filteredDeployments.filter((d) => d.status === 'cancelled');
@@ -101,6 +104,7 @@ export const useMatrixController = () => {
     setFilters({
       duCode: '',
       projectCode: '',
+      teamCode: '',
       materialType: '',
       province: '',
       status: '',

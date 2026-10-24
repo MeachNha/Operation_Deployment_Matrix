@@ -1,6 +1,24 @@
 import React, { useState, useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { useProjectsController } from '../../controllers/useProjectsController';
 import { ProjectDuAssignmentModal } from '../components/ProjectDuAssignmentModal';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Find a project',
+    description: 'Search by project code or name, then narrow the list by contract dates or status. Clear filters to restore the full list.',
+  },
+  {
+    title: 'Create or edit project details',
+    description: 'Choose Add New Project to create a project, or select Edit in a row to update its information.',
+  },
+  {
+    title: 'Manage DU assignments',
+    description: 'Use the DU assignment action in a project row to manage the demining units assigned to that project.',
+  },
+];
 
 const STATUSES = ['planned', 'active', 'completed', 'cancelled'];
 
@@ -160,7 +178,7 @@ export const ProjectsPage = () => {
 
   return (
     <div className="data-page">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>Projects</h1>
           <p className="report-subtitle">
@@ -171,7 +189,15 @@ export const ProjectsPage = () => {
         <button className="btn-primary" onClick={openAdd}>
           + Add New Project
         </button>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help managing projects?"
+        title="How to manage Projects"
+        intro="Maintain project details and their DU assignments for use in deployment records."
+        steps={TUTORIAL_STEPS}
+        reminder="Review project dates and status before saving changes."
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -237,7 +263,7 @@ export const ProjectsPage = () => {
         )}
       </div>
 
-      <div className="table-container">
+      <TableHorizontalScroll>
         <table className="deployments-table">
           <thead>
             <tr>
@@ -300,7 +326,7 @@ export const ProjectsPage = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
 
       {/* ─── Add/Edit Modal ─── */}
       {modalOpen && (

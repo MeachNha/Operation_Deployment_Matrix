@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { deploymentModel } from '../../models/deploymentModel';
 import { projectModel } from '../../models/projectModel';
 import { exportToExcel } from '../../utils/exportToExcel';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Select a project and year',
+    description: 'Use the project selector to focus on one project, or leave All Projects selected. Choose the year you want to review.',
+  },
+  {
+    title: 'Read the monthly matrix',
+    description: 'Review the monthly deployment values in the table for each team and project assignment.',
+  },
+  {
+    title: 'Refresh or export',
+    description: 'Refresh the report after changing the selection, or export the currently selected project and year to Excel.',
+  },
+];
 
 const MONTHS = [
   { key: 'm_jan', label: 'Jan' },
@@ -119,7 +137,7 @@ export const ProjectReportPage = () => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <h1>Project Report — {year}</h1>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <select
@@ -164,9 +182,17 @@ export const ProjectReportPage = () => {
             ⬇ Export to Excel
           </button>
         </div>
-      </header>
+      </PageHeader>
 
-      <div className="table-container" style={{ position: 'relative' }}>
+      <ScreenTutorial
+        tipTitle="Need help with the project report?"
+        title="How to use the Project Report"
+        intro="Explore deployment activity by project and year in the monthly report matrix."
+        steps={TUTORIAL_STEPS}
+        reminder="Check both selectors before exporting so the downloaded report matches your review."
+      />
+
+      <TableHorizontalScroll>
         {loading && rows.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
@@ -234,7 +260,7 @@ export const ProjectReportPage = () => {
             </tfoot>
           )}
         </table>
-      </div>
+      </TableHorizontalScroll>
     </div>
   );
 };

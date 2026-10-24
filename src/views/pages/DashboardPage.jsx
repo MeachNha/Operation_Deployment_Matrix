@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useMatrixController } from '../../controllers/useMatrixController';
+import { useTransferController } from '../../controllers/useTransferController';
 import { FilterBar } from '../components/FilterBar';
 import { CreateDeploymentModal } from '../components/CreateDeploymentModal';
 import { TransferModal } from '../components/TransferModal';
 import { EditDeploymentModal } from '../components/EditDeploymentModal';
 import { CancelDeploymentModal } from '../components/CancelDeploymentModal';
 import { EndDeploymentModal } from '../components/EndDeploymentModal';
+import { DeploymentTutorialModal } from '../components/deployment/DeploymentTutorialModal';
+import { DeploymentsTable } from '../components/deployment/DeploymentsTable';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TutorialTip } from '../components/shared/TutorialTip';
 
 export const DashboardPage = () => {
   const {
@@ -25,12 +30,16 @@ export const DashboardPage = () => {
     cancelDeployment,
   } = useMatrixController();
 
+  const { undoToPreviousDeployment, loading: undoing } = useTransferController();
+
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const closeGuide = useCallback(() => setGuideOpen(false), []);
 
   const openModal = (type, deployment = null) => {
     setSelected(deployment);
@@ -50,13 +59,35 @@ export const DashboardPage = () => {
     setSelected(null);
   };
 
+  const handleUndo = async (deployment) => {
+    const ok = window.confirm(
+      `↩ Undo team ${deployment.team?.team_code}'s current deployment?\n\n` +
+      `This will:\n` +
+      `  • Delete the current deployment (${deployment.project?.code} / ${deployment.assigned_du?.code})\n` +
+      `  • Re-activate the team's previous deployment from history\n\n` +
+      `This cannot be undone.`
+    );
+    if (!ok) return;
+
+    const res = await undoToPreviousDeployment({
+      currentDeployment: deployment,
+    });
+
+    if (!res.success) {
+      alert(`⚠️ Undo failed\n\n${res.error}`);
+      return;
+    }
+
+    refetch();
+  };
+
   if (loading && deployments.length === 0) {
     return <div className="loading">Loading deployment matrix...</div>;
   }
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <h1>Operation Deployment Matrix</h1>
         <div style={{ display: 'flex', gap: 12 }}>
           <button className="btn-primary" onClick={() => openModal('create')}>
@@ -66,7 +97,12 @@ export const DashboardPage = () => {
             {loading ? '⏳ Refreshing...' : '↻ Refresh'}
           </button>
         </div>
-      </header>
+      </PageHeader>
+
+      <TutorialTip
+        title="New to Team Deployment?"
+        onClick={() => setGuideOpen(true)}
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -98,104 +134,23 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters — team filter is now passed via teams prop */}
       <FilterBar
         filters={filters}
         updateFilter={updateFilter}
         resetFilters={resetFilters}
         dus={dus}
         projects={projects}
+        teams={teams}
       />
 
-      {/* Table */}
-      <div className="table-container" style={{ position: 'relative' }}>
-        {loading && deployments.length > 0 && (
-          <div className="table-loading-overlay">
-            <div className="spinner"></div>
-          </div>
-        )}
-
-        <table className="deployments-table">
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>MAT</th>
-              <th>Staff</th>
-              <th>DU</th>
-              <th>Project</th>
-              <th>Province</th>
-              <th>Start</th>
-              <th>Plan End</th>
-              <th>Actual End</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deployments.length === 0 ? (
-              <tr>
-                <td colSpan="11" className="empty-row">
-                  No deployments yet. Click "+ Add Deployment" to create one.
-                </td>
-              </tr>
-            ) : (
-              deployments.map((d) => (
-                <tr key={d.id} className={d.status === 'active' ? 'row-active' : ''}>
-                  <td><strong>{d.team?.team_code}</strong></td>
-                  <td><span className="badge">{d.team?.mat}</span></td>
-                  <td>{d.team?.staff_count}</td>
-                  <td>{d.assigned_du?.code}</td>
-                  <td>{d.project?.code}</td>
-                  <td>{d.province || '—'}</td>
-                  <td>{d.start_deploy}</td>
-                  <td>{d.plan_end_deploy || '—'}</td>
-                  <td>{d.end_deploy || '—'}</td>
-                  <td>
-                    <span className={`status-badge status-${d.status}`}>
-                      {d.status === 'active' && 'Active'}
-                      {d.status === 'completed' && 'Completed'}
-                      {d.status === 'cancelled' && 'Cancelled'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      {d.status === 'active' && (
-                        <>
-                          <button
-                            className="btn-sm btn-transfer"
-                            onClick={() => openModal('transfer', d)}
-                          >
-                            Transfer
-                          </button>
-                          <button
-                            className="btn-sm btn-end"
-                            onClick={() => openModal('end', d)}
-                          >
-                            End
-                          </button>
-                          <button
-                            className="btn-sm btn-delete"
-                            onClick={() => openModal('cancel', d)}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      <button
-                        className="btn-sm"
-                        style={{ background: '#805ad5', color: 'white' }}
-                        onClick={() => openModal('edit', d)}
-                      >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DeploymentsTable
+        deployments={deployments}
+        loading={loading}
+        undoing={undoing}
+        onOpenModal={openModal}
+        onUndo={handleUndo}
+      />
 
       {/* Modals */}
       <CreateDeploymentModal
@@ -241,6 +196,11 @@ export const DashboardPage = () => {
         deployment={selected}
         onEnd={endDeployment}
         saving={loading}
+      />
+
+      <DeploymentTutorialModal
+        isOpen={guideOpen}
+        onClose={closeGuide}
       />
     </div>
   );

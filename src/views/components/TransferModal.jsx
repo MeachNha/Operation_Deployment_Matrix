@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { deploymentModel } from '../../models/deploymentModel';
 
 export const TransferModal = ({
@@ -28,15 +28,30 @@ export const TransferModal = ({
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
 
+  // Track whether the user has manually edited planEndDeploy.
+  // If not, we keep it synced to the selected project's contract_end_date.
+  const planEndEditedRef = useRef(false);
+
+  // Look up a project's default planned end date
+  const defaultPlanEndForProject = (projectId) => {
+    const p = projects.find((x) => x.id === projectId);
+    return p?.contract_end_date || '';
+  };
+
+  // ─── Reset form on open ────────────────────────────
   useEffect(() => {
     if (isOpen && deployment) {
+      const initialProjectId = deployment.project_id || '';
+      planEndEditedRef.current = false;
+
       setForm({
         endDate: today,
         endRemarks: '',
         startDate: today,
-        planEndDeploy: '',
+        // Default to the current project's contract end date
+        planEndDeploy: defaultPlanEndForProject(initialProjectId),
         assignedDuId: deployment.assigned_du_id || '',
-        projectId: deployment.project_id || '',
+        projectId: initialProjectId,
         province: deployment.province || '',
         opsLetterRef: '',
         remarks: '',
@@ -44,7 +59,8 @@ export const TransferModal = ({
       setError(null);
       setErrors({});
     }
-  }, [isOpen, deployment, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, deployment, today, projects]);
 
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === form.projectId),
@@ -54,7 +70,21 @@ export const TransferModal = ({
   if (!isOpen || !deployment) return null;
 
   const handleChange = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+
+      // When project changes, auto-fill planEndDeploy from the new
+      // project's contract end date — unless the user already edited it.
+      if (key === 'projectId' && !planEndEditedRef.current) {
+        next.planEndDeploy = defaultPlanEndForProject(value);
+      }
+      return next;
+    });
+
+    if (key === 'planEndDeploy') {
+      planEndEditedRef.current = true;   // user override
+    }
+
     setErrors((prev) => ({ ...prev, [key]: '' }));
     setError(null);
   };
@@ -83,7 +113,10 @@ export const TransferModal = ({
       if (form.startDate > selectedProject.contract_end_date) {
         next.startDate = `Must be on or before contract end (${selectedProject.contract_end_date})`;
       }
-      if (form.planEndDeploy && form.planEndDeploy > selectedProject.contract_end_date) {
+      if (
+        form.planEndDeploy &&
+        form.planEndDeploy > selectedProject.contract_end_date
+      ) {
         next.planEndDeploy = `Must be on or before contract end (${selectedProject.contract_end_date})`;
       }
     }
@@ -106,7 +139,7 @@ export const TransferModal = ({
         endDeploy: form.endDate,
         endRemarks: form.endRemarks.trim() || null,
         startDeploy: form.startDate,
-        planEndDeploy: form.planEndDeploy || null,
+        planEndDeploy: form.planEndDeploy || null,   // ← persisted
         assignedDuId: form.assignedDuId,
         projectId: form.projectId,
         province: form.province.trim() || null,
@@ -226,7 +259,13 @@ export const TransferModal = ({
                     max={selectedProject?.contract_end_date || undefined}
                     onChange={(e) => handleChange('planEndDeploy', e.target.value)}
                   />
-                  <span className="form-hint">Optional. Planned end for the new deployment.</span>
+                  <span className="form-hint">
+                    Defaults to the project's contract end date
+                    {selectedProject?.contract_end_date
+                      ? ` (${selectedProject.contract_end_date})`
+                      : ''}
+                    . You can change it later.
+                  </span>
                   {errors.planEndDeploy && (
                     <span className="form-error">{errors.planEndDeploy}</span>
                   )}

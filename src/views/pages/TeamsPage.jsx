@@ -1,5 +1,23 @@
 import React, { useState, useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { useTeamsController } from '../../controllers/useTeamsController';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Find a team',
+    description: 'Search by team code, DU, dog, or ALIS, then use the MAT and DU selectors to narrow the list. Clear the search or filters to see more teams.',
+  },
+  {
+    title: 'Add or update team details',
+    description: 'Choose Add New Team to create a team. Use Edit in its row to update team information.',
+  },
+  {
+    title: 'Remove a team when appropriate',
+    description: 'Use Delete in the team row only when the team should be removed from the records.',
+  },
+];
 
 const SUGGESTED_MATERIALS = [
   'BCS', 'TSC', 'EOD', 'BAC', 'FMT', 'DUO', 'IDT',
@@ -166,7 +184,7 @@ export const TeamsPage = () => {
 
   return (
     <div className="data-page">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>Teams</h1>
           <p className="report-subtitle">
@@ -177,7 +195,15 @@ export const TeamsPage = () => {
         <button className="btn-primary" onClick={openAdd}>
           + Add New Team
         </button>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help managing teams?"
+        title="How to manage Teams"
+        intro="Maintain team records here. Team records are used when creating deployment assignments."
+        steps={TUTORIAL_STEPS}
+        reminder="Check existing deployments before deleting a team."
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -237,7 +263,7 @@ export const TeamsPage = () => {
         )}
       </div>
 
-      <div className="table-container">
+      <TableHorizontalScroll>
         <table className="deployments-table">
           <thead>
             <tr>
@@ -295,7 +321,7 @@ export const TeamsPage = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
 
       {/* ─── Add/Edit Modal ───────────────────────────── */}
       {modalOpen && (

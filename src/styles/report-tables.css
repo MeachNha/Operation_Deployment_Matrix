@@ -1,0 +1,127 @@
+/* ─── Tool-Private Table ───────────────────────────── */
+.tool-private-table {
+  font-size: 13px;
+}
+
+.tool-private-table thead th {
+  background: #2c5282;
+  color: white;
+  padding: 10px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #2c5282;
+}
+
+.tool-private-table tbody td {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.tool-private-table .row-mat {
+  background: #ebf8ff;
+  border-top: 2px solid #4299e1;
+}
+
+.tool-private-table .row-mat td {
+  font-weight: 700;
+  color: #2c5282;
+}
+
+.tool-private-table .totals-row {
+  background: #2c5282;
+  color: white;
+}
+
+.tool-private-table .totals-row td {
+  color: white;
+  border-color: #2c5282;
+  padding: 12px 10px;
+  font-size: 14px;
+}
+
+.tool-private-table tbody tr:not(.row-mat):not(.totals-row):hover {
+  background: #f7fafc;
+}
+/* ─── Horizontal scroll wrapper ───────────────────── */
+.h-scroll-wrap {
+  outline: none;                    /* no focus ring on the wrapper */
+  cursor: grab;
+  user-select: none;                /* prevent text selection while dragging */
+}
+.h-scroll-wrap.is-dragging { cursor: grabbing; }
+
+.h-scroll-viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;            /* Firefox */
+  -webkit-overflow-scrolling: touch;
+  /* hide the native scrollbar — arrows + drag are the primary UX */
+  scrollbar-color: #cbd5e0 transparent;
+}
+.h-scroll-viewport::-webkit-scrollbar { height: 10px; }
+.h-scroll-viewport::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 5px;
+}
+
+/* Keep table text selectable for copy/paste */
+.h-scroll-wrap .deployments-table { user-select: text; }
+
+/* Floating arrows */
+.h-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 34px;
+  height: 60px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(45, 55, 72, 0.85);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.h-scroll-btn:hover { background: rgba(45, 55, 72, 1); }
+.h-scroll-btn-left  { left: 6px; }
+.h-scroll-btn-right { right: 6px; }
+/* Optionally hide arrows on small screens where drag is natural */
+@media (max-width: 640px) {
+  .h-scroll-btn { display: none; }
+}
+.btn-sm.btn-undo {
+  background: #dd6b20;
+  color: #fff;
+}
+.btn-sm.btn-undo:hover { background: #c05621; }
+.btn-sm.btn-undo:disabled { opacity: 0.6; cursor: not-allowed; }
+.ops-letter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ops-letter-pill::before {
+  content: '📄';
+  font-size: 11px;
+}
+.ops-letter-pill.no-letter {
+  background: #edf2f7;
+  color: #718096;
+  border-color: #e2e8f0;
+}
+.ops-letter-pill.no-letter::before {
+  content: '—';
+}

@@ -1,6 +1,24 @@
 import React, { useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { useToolPrivateReport } from '../../controllers/useToolPrivateReport';
 import { exportToExcel } from '../../utils/exportToExcel';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Choose the reporting year',
+    description: 'Select a year to view its tool-private deployment data.',
+  },
+  {
+    title: 'Compare teams and DUs',
+    description: 'Read each team row across the DU columns to review recorded tool-private counts; use Grand Total for the row total.',
+  },
+  {
+    title: 'Refresh or export',
+    description: 'Refresh to reload the selected year, or export the matrix to Excel.',
+  },
+];
 
 const DU_COLUMNS = [
   { key: 'out_du_ddu',  label: 'DDU' },
@@ -82,7 +100,7 @@ export const ToolPrivateReportPage = () => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>Tool-Private Report — {year}</h1>
           <p className="report-subtitle">
@@ -112,9 +130,17 @@ export const ToolPrivateReportPage = () => {
             {loading ? '⏳ Refreshing...' : '↻ Refresh'}
           </button>
         </div>
-      </header>
+      </PageHeader>
 
-      <div className="table-container" style={{ position: 'relative' }}>
+      <ScreenTutorial
+        tipTitle="Need help with the private report?"
+        title="How to use the Tool-Private Report"
+        intro="This matrix summarizes tool-private deployment counts for teams across demining units."
+        steps={TUTORIAL_STEPS}
+        reminder="Use the horizontal table scroll when needed to see all DU columns."
+      />
+
+      <TableHorizontalScroll>
         {loading && rows.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
@@ -205,7 +231,7 @@ export const ToolPrivateReportPage = () => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
     </div>
   );
 };

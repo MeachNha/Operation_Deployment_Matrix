@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { projectDuAssignmentModel } from '../../models/projectDuAssignmentModel';
 import { duModel } from '../../models/duModel';
+import { TableHorizontalScroll } from './shared/TableHorizontalScroll';
 
 export const ProjectDuAssignmentModal = ({
   isOpen,
@@ -233,7 +234,7 @@ export const ProjectDuAssignmentModal = ({
                   No DUs assigned yet.
                 </div>
               ) : (
-                <div className="table-container">
+                <TableHorizontalScroll>
                   <table className="deployments-table">
                     <thead>
                       <tr>
@@ -289,7 +290,7 @@ export const ProjectDuAssignmentModal = ({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </TableHorizontalScroll>
               )}
 
               <div className="modal-actions" style={{ marginTop: 20 }}>

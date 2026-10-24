@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { deploymentModel } from '../../models/deploymentModel';
 import { duModel } from '../../models/duModel';
 import { projectModel } from '../../models/projectModel';
 import { exportToExcel } from '../../utils/exportToExcel';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Choose a search period',
+    description: 'Search all deployments, choose a quick range, or enter both dates in Custom date range.',
+  },
+  {
+    title: 'Run the search',
+    description: 'Click Search deployments to load the selected period. Changing a period does not reload results until Search is clicked.',
+  },
+  {
+    title: 'Refine and export',
+    description: 'Use the DU and Project filters to narrow the results. Refresh reloads the last searched period, and Export downloads the filtered rows.',
+  },
+];
 
 // ─── Helpers ───
 function fmt(date) {
@@ -46,8 +64,8 @@ const PRESETS = [
 
 export const EndingsReportPage = () => {
   // ─── Filter mode state ──────────────────────────────
-  // mode: 'all' | 'quick' | 'range'
-  const [mode, setMode] = useState('all');
+  // mode: 'none' | 'quick' | 'range'
+  const [mode, setMode] = useState('none');
 
   // Quick range: which preset is active (only if mode === 'quick')
   const [activePreset, setActivePreset] = useState(null);
@@ -62,8 +80,9 @@ export const EndingsReportPage = () => {
 
   // Results
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [searchedCriteria, setSearchedCriteria] = useState(null);
 
   // DU + Project filters
   const [filterDu, setFilterDu] = useState('');
@@ -87,44 +106,17 @@ useEffect(() => {
   load();
 }, []);
 
-  // ─── Compute effective date range based on mode ─────
-  const effectiveRange = useMemo(() => {
-    if (mode === 'quick' && activePreset) {
-      const preset = PRESETS.find((p) => p.key === activePreset);
-      return preset ? preset.fn() : null;
-    }
-    if (mode === 'range' && fromDate && toDate) {
-      return { from: fromDate, to: toDate };
-    }
-    return null; // 'all' mode → no date filter
-  }, [mode, activePreset, fromDate, toDate]);
-
   // ─── Fetch endings ──────────────────────────────────
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (criteria) => {
+    if (!criteria) return;
+
     setLoading(true);
     setError(null);
     try {
-      let data;
-      if (effectiveRange) {
-        // With date filter
-        if (effectiveRange.from > effectiveRange.to) {
-          setError('From date must be on or before To date');
-          setRows([]);
-          setLoading(false);
-          return;
-        }
-        data = await deploymentModel.getEndingsInRange(
-          effectiveRange.from,
-          effectiveRange.to
-        );
-      } else {
-        // No date filter → show ALL active deployments with a plan end
-        // Use a very wide range
-        data = await deploymentModel.getEndingsInRange(
-          '2020-01-01',
-          '2099-12-31'
-        );
-      }
+      const data = await deploymentModel.getEndingsInRange(
+        criteria.from,
+        criteria.to
+      );
       setRows(data || []);
     } catch (err) {
       console.error('Endings report error:', err);
@@ -132,11 +124,7 @@ useEffect(() => {
     } finally {
       setLoading(false);
     }
-  }, [effectiveRange]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  }, []);
 
   // ─── Apply DU + Project filter in memory ────────────
   const filteredRows = useMemo(() => {
@@ -160,31 +148,69 @@ useEffect(() => {
 
   // ─── Mode toggles ───────────────────────────────────
   const toggleQuickRanges = (checked) => {
-    setMode(checked ? 'quick' : 'all');
+    setMode(checked ? 'quick' : 'none');
     if (checked) {
       setActivePreset(null);
     }
   };
 
   const toggleDateRange = (checked) => {
-    setMode(checked ? 'range' : 'all');
+    setMode(checked ? 'range' : 'none');
   };
 
   const applyPreset = (key) => {
     setActivePreset(key);
   };
 
+  const handleSearch = () => {
+    let criteria;
+
+    if (mode === 'quick') {
+      const preset = PRESETS.find((item) => item.key === activePreset);
+      if (!preset) {
+        setError('Select a quick range before searching');
+        return;
+      }
+      criteria = { ...preset.fn(), mode: 'quick', label: `Quick: ${preset.label}` };
+    } else if (mode === 'range') {
+      if (!fromDate || !toDate) {
+        setError('Choose both a start and end date before searching');
+        return;
+      }
+      if (fromDate > toDate) {
+        setError('From date must be on or before To date');
+        return;
+      }
+      criteria = {
+        from: fromDate,
+        to: toDate,
+        mode: 'range',
+        label: `Range: ${fromDate} → ${toDate}`,
+      };
+    } else {
+      setError('Choose a quick range or custom date range before searching');
+      return;
+    }
+
+    setError(null);
+    setSearchedCriteria(criteria);
+    fetchData(criteria);
+  };
+
   const clearAllFilters = () => {
-    setMode('all');
+    setMode('none');
     setActivePreset(null);
     setFromDate('');
     setToDate('');
     setFilterDu('');
     setFilterProject('');
+    setRows([]);
+    setSearchedCriteria(null);
+    setError(null);
   };
 
   const hasAnyFilter =
-    mode !== 'all' || filterDu || filterProject;
+    mode !== 'none' || filterDu || filterProject;
 
   // ─── Export ─────────────────────────────────────────
   const handleExport = async () => {
@@ -207,18 +233,9 @@ useEffect(() => {
       days_remaining: r.days_remaining ?? '—',
     }));
 
-    // Build subtitle
-    let rangeText = 'All deployments';
-    if (mode === 'quick' && activePreset) {
-      const p = PRESETS.find((x) => x.key === activePreset);
-      rangeText = `Quick: ${p?.label}`;
-    } else if (mode === 'range' && fromDate && toDate) {
-      rangeText = `Range: ${fromDate} → ${toDate}`;
-    }
-
     await exportToExcel(exportRows, columns, `Endings_Report`, {
       title: 'Deployment Endings Report',
-      subtitle: `${rangeText} · Generated on ${new Date().toLocaleDateString('en-GB')}`,
+      subtitle: `${searchedCriteria.label} · Generated on ${new Date().toLocaleDateString('en-GB')}`,
       sheetName: 'Endings',
     });
   };
@@ -231,95 +248,158 @@ useEffect(() => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>Deployment Endings Report</h1>
           <p className="report-subtitle">
-            {mode === 'all' && 'Showing all active deployments'}
-            {mode === 'quick' && activePreset && `Quick range: ${PRESETS.find(p => p.key === activePreset)?.label}`}
-            {mode === 'quick' && !activePreset && 'Select a quick range below'}
-            {mode === 'range' && fromDate && toDate && `From ${fromDate} to ${toDate}`}
-            {mode === 'range' && (!fromDate || !toDate) && 'Fill in both dates'}
+            {searchedCriteria
+              ? `Showing ${searchedCriteria.label}`
+              : 'Choose a period, then search for deployments ending soon'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={handleExport}
             className="btn-export"
-            disabled={filteredRows.length === 0}
+            disabled={!searchedCriteria || filteredRows.length === 0}
           >
             ⬇ Export to Excel
           </button>
-          <button onClick={fetchData} className="btn-refresh" disabled={loading}>
+          <button
+            onClick={() => fetchData(searchedCriteria)}
+            className="btn-refresh"
+            disabled={loading || !searchedCriteria}
+          >
             {loading ? '⏳ Refreshing...' : '↻ Refresh'}
           </button>
         </div>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help with the Endings Report?"
+        title="How to use the Deployment Endings Report"
+        intro="Find deployments ending within a selected period and review the remaining time for each team."
+        steps={TUTORIAL_STEPS}
+        reminder="A quick range or both custom dates are required before searching."
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
       {/* ══════════════════════════════════════════════
           FILTER SELECTION
           ══════════════════════════════════════════════ */}
-      <div className="filter-mode-group">
-        {/* Quick Ranges */}
-        <div className="filter-mode-block">
-          <label className="filter-mode-checkbox">
-            <input
-              type="checkbox"
-              checked={mode === 'quick'}
-              onChange={(e) => toggleQuickRanges(e.target.checked)}
-            />
-            <span className="filter-mode-label">Quick Ranges</span>
-          </label>
+      <section className="standout-search-panel" aria-labelledby="endings-search-title">
+        <div className="standout-search-heading">
+          <span className="standout-search-eyebrow">DEPLOYMENT ENDINGS</span>
+          <h2 id="endings-search-title">Choose a search period</h2>
+          <p>Choose a quick range or enter custom dates before searching.</p>
+        </div>
 
-          <div className={`preset-bar ${mode !== 'quick' ? 'disabled' : ''}`}>
-            {PRESETS.map((p) => (
-              <button
-                key={p.key}
-                className={`preset-btn ${activePreset === p.key ? 'preset-active' : ''}`}
-                onClick={() => applyPreset(p.key)}
-                disabled={mode !== 'quick'}
-              >
-                {p.label}
-              </button>
-            ))}
+        <div className="filter-mode-group">
+          <div className={`filter-mode-block ${mode === 'quick' ? 'filter-mode-block-active' : ''}`}>
+            <label className="filter-mode-checkbox">
+              <input
+                type="checkbox"
+                checked={mode === 'quick'}
+                onChange={(e) => toggleQuickRanges(e.target.checked)}
+              />
+              <span className="filter-mode-icon" aria-hidden="true">⚡</span>
+              <span className="filter-mode-copy">
+                <strong>Quick ranges</strong>
+                <span>Choose a ready-made period</span>
+              </span>
+            </label>
+
+            <div className={`preset-bar ${mode !== 'quick' ? 'disabled' : ''}`}>
+              {PRESETS.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  className={`preset-btn ${activePreset === p.key ? 'preset-active' : ''}`}
+                  aria-pressed={activePreset === p.key}
+                  onClick={() => applyPreset(p.key)}
+                  disabled={mode !== 'quick'}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`filter-mode-block ${mode === 'range' ? 'filter-mode-block-active' : ''}`}>
+            <label className="filter-mode-checkbox">
+              <input
+                type="checkbox"
+                checked={mode === 'range'}
+                onChange={(e) => toggleDateRange(e.target.checked)}
+              />
+              <span className="filter-mode-icon" aria-hidden="true">▦</span>
+              <span className="filter-mode-copy">
+                <strong>Custom date range</strong>
+                <span>Select the exact period to review</span>
+              </span>
+            </label>
+
+            <div className={`date-range-row ${mode !== 'range' ? 'disabled' : ''}`}>
+              <div className="standout-date-field">
+                <label htmlFor="endings-date-from">From</label>
+                <input
+                  id="endings-date-from"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  disabled={mode !== 'range'}
+                />
+              </div>
+              <span className="standout-date-separator" aria-hidden="true">to</span>
+              <div className="standout-date-field">
+                <label htmlFor="endings-date-to">To</label>
+                <input
+                  id="endings-date-to"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  disabled={mode !== 'range'}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Date Range */}
-        <div className="filter-mode-block">
-          <label className="filter-mode-checkbox">
-            <input
-              type="checkbox"
-              checked={mode === 'range'}
-              onChange={(e) => toggleDateRange(e.target.checked)}
-            />
-            <span className="filter-mode-label">Date Range</span>
-          </label>
-
-          <div className={`date-range-row ${mode !== 'range' ? 'disabled' : ''}`}>
-            <div className="filter-group">
-              <label>From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                disabled={mode !== 'range'}
-              />
-            </div>
-            <div className="filter-group">
-              <label>To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                disabled={mode !== 'range'}
-              />
-            </div>
+        <div className="standout-search-actions">
+          <div className="standout-search-status" aria-live="polite">
+            {searchedCriteria ? (
+              <>
+                <span className="standout-search-status-label">Last search</span>
+                <strong>{searchedCriteria.label}</strong>
+              </>
+            ) : (
+              <span>Choose a quick range or enter custom dates to get started.</span>
+            )}
           </div>
+          <button
+            type="button"
+            className="standout-search-button"
+            onClick={handleSearch}
+            disabled={
+              loading ||
+              mode === 'none' ||
+              (mode === 'quick' && !activePreset) ||
+              (mode === 'range' && (!fromDate || !toDate))
+            }
+          >
+            {loading ? (
+              <span className="standout-search-spinner" aria-hidden="true" />
+            ) : (
+              <svg className="standout-search-icon" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5.5" />
+                <path d="m13 13 4 4" />
+              </svg>
+            )}
+            {loading ? 'Searching...' : 'Search deployments'}
+          </button>
         </div>
-      </div>
+      </section>
 
       {/* ══════════════════════════════════════════════
           DU + PROJECT FILTERS
@@ -389,7 +469,7 @@ useEffect(() => {
       {/* ══════════════════════════════════════════════
           TABLE
           ══════════════════════════════════════════════ */}
-      <div className="table-container" style={{ position: 'relative' }}>
+      <TableHorizontalScroll>
         {loading && rows.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
@@ -415,11 +495,11 @@ useEffect(() => {
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan="10" className="empty-row">
-                  {mode === 'quick' && !activePreset
-                    ? 'Pick a quick range to see results.'
-                    : mode === 'range' && (!fromDate || !toDate)
-                    ? 'Fill in both dates to see results.'
-                    : 'No deployments match the current filters.'}
+                  {!searchedCriteria
+                    ? 'Choose a quick range or custom date range, then click Search to see results.'
+                    : loading
+                      ? 'Loading…'
+                      : 'No deployments match the current filters.'}
                 </td>
               </tr>
             ) : (
@@ -454,7 +534,7 @@ useEffect(() => {
             )}
           </tbody>
         </table>
-      </div>
+      </TableHorizontalScroll>
     </div>
   );
 };

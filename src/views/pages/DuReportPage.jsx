@@ -1,7 +1,25 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { PageHeader } from '../components/shared/PageHeader';
+import { TableHorizontalScroll } from '../components/shared/TableHorizontalScroll';
+import { ScreenTutorial } from '../components/shared/ScreenTutorial';
 import { deploymentModel } from '../../models/deploymentModel';
 import { duModel } from '../../models/duModel';
 import { exportToExcel } from '../../utils/exportToExcel';
+
+const TUTORIAL_STEPS = [
+  {
+    title: 'Choose a demining unit',
+    description: 'Leave the selector on All DUs to see the full staffing report, or choose one DU to focus on its deployment totals.',
+  },
+  {
+    title: 'Review the totals',
+    description: 'Use the summary cards and table to review active teams, staff, projects, and provinces for the selected DU or all units.',
+  },
+  {
+    title: 'Export the report',
+    description: 'Select Export to Excel to download the report using the current DU selection.',
+  },
+];
 
 export const DuReportPage = () => {
   const [rows, setRows] = useState([]);
@@ -97,7 +115,7 @@ export const DuReportPage = () => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <PageHeader>
         <div>
           <h1>DU Staffing Report</h1>
           <p className="report-subtitle">
@@ -137,7 +155,15 @@ export const DuReportPage = () => {
             ⬇ Export to Excel
           </button>
         </div>
-      </header>
+      </PageHeader>
+
+      <ScreenTutorial
+        tipTitle="Need help with the DU report?"
+        title="How to use the DU Staffing Report"
+        intro="Use this report to compare active deployment and staffing totals across demining units."
+        steps={TUTORIAL_STEPS}
+        reminder="Choose All DUs before exporting to include every unit."
+      />
 
       {/* Summary cards */}
       <div className="stats-grid">
@@ -160,7 +186,7 @@ export const DuReportPage = () => {
       </div>
 
       {/* Table */}
-      <div className="table-container" style={{ position: 'relative' }}>
+      <TableHorizontalScroll>
         {loading && rows.length > 0 && (
           <div className="table-loading-overlay">
             <div className="spinner"></div>
@@ -231,7 +257,7 @@ export const DuReportPage = () => {
             </tfoot>
           )}
         </table>
-      </div>
+      </TableHorizontalScroll>
     </div>
   );
 };

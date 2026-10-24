@@ -26,16 +26,34 @@ const ProjectsPage = lazy(() =>
   }))
 );
 
+const REPORT_PAGES = [
+  'dashboard',
+  'monthly',
+  'du',
+  'project',
+  'endings',
+  'tool',
+  'projpriv',
+  'teamMovement',
+  'standOutTeams',
+];
+
 function App() {
   const [page, setPage] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="app-layout">
-      <Sidebar page={page} onPageChange={setPage} />
+    <div className={`app-layout ${sidebarCollapsed ? 'app-layout-sidebar-collapsed' : ''}`}>
+      <Sidebar
+        page={page}
+        onPageChange={setPage}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
+      />
 
       <main className="app-main">
         <Suspense fallback={<div>Loading...</div>}>
-          {page === 'dashboard' && <ReportsPage />}
+          {REPORT_PAGES.includes(page) && <ReportsPage tab={page} />}
           {page === 'teams' && <TeamsPage />}
           {page === 'dus' && <DusPage />}
           {page === 'projects' && <ProjectsPage />}
